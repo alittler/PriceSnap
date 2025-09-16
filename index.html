@@ -169,14 +169,6 @@
 
         // --- API Call and Results ---
         async function callGemini() {
-            // Check if running from a local file, which won't work with the API route.
-            if (window.location.protocol === 'file:') {
-                resultsContainer.classList.remove('hidden');
-                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                displayError("This feature can't run from a local file. Please use the Vercel deployment or a local server.");
-                return;
-            }
-
             resultsContainer.classList.remove('hidden');
             loader.classList.remove('hidden');
             resultsContent.classList.add('hidden');
@@ -185,20 +177,106 @@
             document.getElementById('priceList').innerHTML = '';
             resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            const apiUrl = `/api/gemini`;
-            const imagePayload = uploadedImages.filter(Boolean).map(img => ({ mimeType: "image/jpeg", data: img.base64 }));
+            const apiKey = "AIzaSyAeqR2CjRgeRKSrauhOG2JvYU4ZqEnnBpA"; // IMPORTANT: Add your Google AI API key here for the app to work.
+
+            if (!apiKey) {
+                displayError("API Key is missing. Please add your Google AI API key to the script to enable analysis.");
+                return;
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `You are an expert at analyzing photos of grocery store price tags. Your goal is to determine the best value by comparing unit prices.
+- Identify the item name.
+- Find the total price and the total weight/volume.
+- Look for any sales, discounts, or special offers (e.g., "50% off", "Sale", "Club Price") and apply them to the final price.
+- Calculate the price per common units (e.g., per ounce, per pound, per kg, per liter).
+- If comparing different items (e.g., beef vs chicken), identify them as such. If they are the same item, label them as Image 1, Image 2, etc.
+- Always define the "best deal" as the one with the LOWEST price per unit.
+- Rank all items from best deal (rank 1) to worst.
+- Provide a brief summary and reasoning for your conclusion.
+- Respond ONLY with the specified JSON object.`;
+
+            const userPrompt = "Analyze the provided images of grocery items and determine which offers the best value. Provide the result in the structured JSON format.";
+
+            const imageParts = uploadedImages.filter(Boolean).map(img => ({
+                inline_data: {
+                    mime_type: "image/jpeg",
+                    data: img.base64
+                }
+            }));
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: userPrompt }, ...imageParts]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            items: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        name: { type: "STRING" },
+                                        price: { type: "STRING" },
+                                        description: { type: "STRING" },
+                                        rank: { type: "INTEGER" }
+                                    }
+                                }
+                            },
+                            comparison_summary: { type: "STRING" },
+                            reasoning: { type: "STRING" },
+                            unit_comparisons: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        title: { type: "STRING" },
+                                        items: {
+                                            type: "ARRAY",
+                                            items: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    name: { type: "STRING" },
+                                                    unit_price: { type: "STRING" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
 
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ images: imagePayload })
+                    body: JSON.stringify(payload)
                 });
-                if (!response.ok) throw new Error(`API call failed: ${response.status}`);
-                const jsonResponse = await response.json();
-                displayResults(jsonResponse);
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    throw new Error(`API call failed: ${response.status} - ${errorBody}`);
+                }
+                const result = await response.json();
+                
+                if (!result.candidates || !result.candidates[0].content.parts[0].text) {
+                    throw new Error("Invalid response structure from API.");
+                }
+                
+                const jsonText = result.candidates[0].content.parts[0].text;
+                const jsonData = JSON.parse(jsonText);
+                displayResults(jsonData);
             } catch (error) {
-                console.error("Error calling backend API:", error);
+                console.error("Error calling Gemini API:", error);
                 displayError();
             }
         }
@@ -309,4 +387,5 @@
     </script>
 </body>
 </html>
+
 
