@@ -1,0 +1,474 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Grocery Price Comparator</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+                background-color: #020617; /* slate-950 */
+            }
+            /* Hide the default file input */
+            input[type="file"] {
+                display: none;
+            }
+            .best-deal-glow {
+                box-shadow: 0 0 20px 7px rgba(250, 204, 21, 0.4); /* yellow-400 with opacity */
+            }
+            .image-preview {
+                width: 100%;
+                height: 100%;
+                object-fit: cover; /* This will crop and center the image */
+                border-radius: 0.75rem; /* rounded-lg */
+            }
+        </style>
+    </head>
+    <body class="bg-slate-950 text-slate-200 min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
+
+        <div class="w-full max-w-6xl mx-auto">
+            <!-- Header -->
+            <header class="text-center mb-8">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 text-transparent bg-clip-text">AI Price Comparator</h1>
+                <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal.</p>
+            </header>
+
+            <!-- Main Comparison Area -->
+            <main id="imageSlotsContainer" class="flex flex-wrap justify-center gap-6">
+                <!-- Image slots will be dynamically inserted here -->
+            </main>
+
+            <!-- Action Buttons -->
+            <div id="actionButtons" class="text-center mt-8">
+                <button id="resetBtn" class="hidden w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-10 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50">
+                    Start Over
+                </button>
+            </div>
+
+            <!-- AI Results Section -->
+            <div id="resultsContainer" class="w-full mx-auto mt-10 p-4 sm:p-6 rounded-xl hidden">
+                <!-- Loading Spinner -->
+                <div id="loader" class="text-center hidden">
+                    <svg class="animate-spin h-10 w-10 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="mt-4 text-slate-400">AI is analyzing the images...</p>
+                </div>
+                <!-- Results Content -->
+                <div id="resultsContent" class="hidden">
+                    <h2 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 text-transparent bg-clip-text mb-6 text-center">Comparison Result</h2>
+                    <div id="summary" class="text-base sm:text-lg text-center bg-slate-800/50 border border-slate-700 p-4 rounded-xl mb-6 text-slate-300"></div>
+                    <div id="resultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
+                        <!-- Result cards will be dynamically inserted here -->
+                    </div>
+                    <div class="mt-8 max-w-4xl mx-auto">
+                        <h3 class="text-lg font-semibold text-slate-300 text-center">AI's Reasoning</h3>
+                        <p id="reasoning" class="text-slate-400 bg-slate-800/50 border border-slate-700 p-4 rounded-xl mt-2"></p>
+                    </div>
+                </div>
+                <!-- Error Message -->
+                <div id="errorContent" class="hidden text-center">
+                    <h2 class="text-xl font-bold text-red-500 mb-2">Analysis Failed</h2>
+                    <p class="text-slate-400">The AI could not process the images. Please try again with clearer photos.</p>
+                </div>
+            </div>
+
+            <!-- Price List Section -->
+            <div id="priceListContainer" class="w-full max-w-4xl mx-auto mt-8 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-slate-300 text-center mb-4">Price Summary</h3>
+                    <ul id="priceList" class="text-slate-400 space-y-3">
+                        <!-- Prices will be dynamically inserted here -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const MAX_IMAGES = 5;
+            let uploadedImages = [];
+            let unitComparisonsData = [];
+            let currentUnitIndex = 0;
+
+            const imageSlotsContainer = document.getElementById('imageSlotsContainer');
+            const resetBtn = document.getElementById('resetBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const loader = document.getElementById('loader');
+            const resultsContent = document.getElementById('resultsContent');
+            const errorContent = document.getElementById('errorContent');
+            const priceListContainer = document.getElementById('priceListContainer');
+            
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                const index = parseInt(event.target.dataset.index, 10);
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64String = e.target.result;
+                    uploadedImages[index] = {
+                        src: base64String,
+                        base64: base64String.split(',')[1]
+                    };
+                    renderUI(); // Re-render the whole UI
+                    
+                    // Scroll to the new slot
+                    setTimeout(() => {
+                        const allSlots = imageSlotsContainer.children;
+                        const lastSlot = allSlots[allSlots.length - 1];
+                        if (lastSlot) {
+                            lastSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function createFilledSlot(src, index) {
+                const slot = document.createElement('div');
+                slot.className = "w-full max-w-sm h-64 md:h-80 bg-slate-900 rounded-2xl flex items-center justify-center border-2 border-solid border-slate-700 relative";
+                slot.innerHTML = `<img src="${src}" class="absolute top-0 left-0 image-preview" alt="Grocery item ${index + 1}">`;
+                return slot;
+            }
+
+            function createNewImageSlot(index) {
+                const fileId = `file-${index}`;
+                const label = document.createElement('label');
+                label.htmlFor = fileId;
+                label.className = "cursor-pointer group w-full max-w-sm h-64 md:h-80 bg-slate-900/50 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-800 transition-all duration-300 hover:border-cyan-500 hover:bg-slate-900";
+                label.innerHTML = `
+                    <div class="text-center p-6 w-full h-full flex flex-col items-center justify-center relative">
+                        <div class="transition-transform duration-300 group-hover:scale-105">
+                            <svg class="w-16 h-16 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
+                            <p class="text-xs text-slate-500">Tap to use camera</p>
+                        </div>
+                    </div>
+                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                `;
+                const input = label.querySelector('input');
+                input.addEventListener('change', handleFileSelect);
+                return label;
+            }
+
+            function createSpecialCompareSlot(index) {
+                const fileId = `file-${index}`;
+                const container = document.createElement('div');
+                container.className = "w-full max-w-sm h-64 md:h-80 bg-slate-900/50 rounded-2xl flex flex-col border-2 border-dashed border-slate-800 overflow-hidden";
+                
+                container.innerHTML = `
+                    <label for="${fileId}" class="group cursor-pointer flex-1 flex items-center justify-center transition-all duration-300 hover:bg-slate-900 relative p-4">
+                        <div class="transition-transform duration-300 group-hover:scale-105 text-center">
+                            <svg class="w-12 h-12 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
+                        </div>
+                        <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                    </label>
+                    <div class="border-t-2 border-dashed border-slate-800"></div>
+                    <button class="w-full flex-none h-1/2 bg-slate-900/50 hover:bg-slate-800 transition-colors text-cyan-400 font-semibold flex items-center justify-center p-4 text-lg">
+                        Calculate Best Deal
+                    </button>
+                `;
+                
+                const input = container.querySelector(`#${fileId}`);
+                input.addEventListener('change', handleFileSelect);
+
+                const compareBtn = container.querySelector('button');
+                compareBtn.addEventListener('click', callGemini);
+                
+                return container;
+            }
+
+            function renderUI() {
+                imageSlotsContainer.innerHTML = ''; 
+                
+                uploadedImages.forEach((imgData, index) => {
+                    const filledSlot = createFilledSlot(imgData.src, index);
+                    imageSlotsContainer.appendChild(filledSlot);
+                });
+
+                const imageCount = uploadedImages.length;
+                
+                if (imageCount < MAX_IMAGES) {
+                    const nextSlot = (imageCount < 2) ? createNewImageSlot(imageCount) : createSpecialCompareSlot(imageCount);
+                    imageSlotsContainer.appendChild(nextSlot);
+                }
+            }
+            
+            async function callGemini() {
+                resultsContainer.classList.remove('hidden');
+                loader.classList.remove('hidden');
+                resultsContent.classList.add('hidden');
+                errorContent.classList.add('hidden');
+                priceListContainer.classList.add('hidden');
+                document.getElementById('priceList').innerHTML = '';
+                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                const apiKey = ""; // Canvas will provide this
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                
+                const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices from multiple images. For each image, identify the item, extract its price, and apply any visible discounts. First, present each item's details individually. Second, determine several logical common units (e.g., per lb, per oz, per kg, per 100g). Third, create an array of summary cards, one for each common unit, comparing all items by that unit with prices sorted from lowest to highest. Respond ONLY with the specified JSON object.`;
+
+                const userPrompt = `Analyze these ${uploadedImages.filter(Boolean).length} images. Provide a summary of your findings in the requested JSON format.`;
+
+                const imageParts = uploadedImages.filter(Boolean).map(img => ({
+                    inlineData: { mimeType: "image/jpeg", data: img.base64 }
+                }));
+
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: "user", parts: [{ text: userPrompt }, ...imageParts] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                comparison_summary: { type: "STRING" },
+                                reasoning: { type: "STRING" },
+                                items: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            name: { type: "STRING" },
+                                            description: { type: "STRING" },
+                                            price: { type: "STRING" },
+                                            rank: { type: "NUMBER" }
+                                        },
+                                        required: ["name", "description", "price", "rank"]
+                                    }
+                                },
+                                unit_comparisons: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            title: { type: "STRING" },
+                                            items: {
+                                                type: "ARRAY",
+                                                items: {
+                                                    type: "OBJECT",
+                                                    properties: {
+                                                        name: { type: "STRING" },
+                                                        unit_price: { type: "STRING" }
+                                                    },
+                                                    required: ["name", "unit_price"]
+                                                }
+                                            }
+                                        },
+                                        required: ["title", "items"]
+                                    }
+                                }
+                            },
+                            required: ["comparison_summary", "reasoning", "items", "unit_comparisons"]
+                        }
+                    }
+                };
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        const jsonResponse = JSON.parse(candidate.content.parts[0].text);
+                        displayResults(jsonResponse);
+                    } else {
+                        displayError();
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    displayError();
+                }
+            }
+
+            function displayResults(data) {
+                document.getElementById('summary').textContent = data.comparison_summary;
+                document.getElementById('reasoning').textContent = data.reasoning;
+                
+                unitComparisonsData = data.unit_comparisons || [];
+                currentUnitIndex = 0;
+
+                const resultsGrid = document.getElementById('resultsGrid');
+                resultsGrid.innerHTML = ''; // Clear previous results
+                const priceList = document.getElementById('priceList');
+                priceList.innerHTML = ''; // Clear previous list
+
+                data.items.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.id = `result-card-${index}`;
+                    const isBestDeal = (item.rank === 1);
+                    
+                    card.className = `p-6 rounded-2xl border border-slate-800 bg-slate-900/50 transition-all duration-300 transform`;
+
+                    let rankHTML = '';
+                    if (data.items.length > 2) {
+                        let ordinal;
+                        if (item.rank === 1) ordinal = 'st';
+                        else if (item.rank === 2) ordinal = 'nd';
+                        else if (item.rank === 3) ordinal = 'rd';
+                        else ordinal = 'th';
+                        rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-cyan-400">${item.rank}</span><span class="text-2xl font-bold text-cyan-500">${ordinal}</span></div>`;
+                    }
+
+                    card.innerHTML = `
+                        ${rankHTML}
+                        <h3 class="text-lg font-semibold text-slate-300">${item.name}</h3>
+                        <p class="text-slate-400 text-sm">${item.description}</p>
+                        <p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>
+                        ${isBestDeal ? `<div class="mt-3 inline-block bg-yellow-400/20 text-yellow-300 text-xs font-semibold px-3 py-1 rounded-full">🏆 Best Deal</div>` : ''}
+                    `;
+                    resultsGrid.appendChild(card);
+
+                    // Add to text list
+                    const li = document.createElement('li');
+                    li.className = `flex justify-between items-center p-3 rounded-lg ${isBestDeal ? 'bg-yellow-400/10' : ''}`;
+                    
+                    let namePart;
+                    if (data.items.length > 2) {
+                        namePart = `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>`;
+                    } else {
+                        namePart = `<span>${item.name}</span>`;
+                    }
+
+                    li.innerHTML = `
+                        <div class="flex items-center font-medium ${isBestDeal ? 'text-yellow-300' : 'text-slate-300'}">
+                            ${namePart}
+                        </div>
+                        <span class="${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-400'}">${item.price}</span>
+                    `;
+                    priceList.appendChild(li);
+                });
+
+                // Add the new Unit Comparison Card
+                if (unitComparisonsData.length > 0) {
+                    const comparisonCard = document.createElement('div');
+                    comparisonCard.id = 'unitComparisonCard'; // Added ID for scrolling and interaction
+                    comparisonCard.className = `md:col-span-2 lg:col-span-3 p-6 rounded-2xl border border-cyan-500 bg-slate-900 text-left cursor-pointer group`;
+                    comparisonCard.addEventListener('click', cycleUnits);
+                    resultsGrid.appendChild(comparisonCard);
+                    updateUnitComparisonView(); // Initial population of the card
+                }
+
+
+                loader.classList.add('hidden');
+                resultsContent.classList.remove('hidden');
+                errorContent.classList.add('hidden');
+                priceListContainer.classList.remove('hidden');
+                
+                // Show reset button
+                resetBtn.parentElement.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+
+                setTimeout(() => {
+                    const comparisonTable = document.getElementById('unitComparisonCard');
+                    if(comparisonTable) {
+                        comparisonTable.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
+
+            function displayError() {
+                loader.classList.add('hidden');
+                resultsContent.classList.add('hidden');
+                errorContent.classList.remove('hidden');
+                priceListContainer.classList.add('hidden');
+                // Show reset button on error too
+                resetBtn.parentElement.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+            }
+
+            function resetView() {
+                uploadedImages = [];
+                unitComparisonsData = [];
+                currentUnitIndex = 0;
+                
+                resultsContainer.classList.add('hidden');
+                loader.classList.add('hidden');
+                resultsContent.classList.add('hidden');
+                errorContent.classList.add('hidden');
+                
+                resetBtn.parentElement.classList.add('hidden');
+                resetBtn.classList.add('hidden');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                renderUI();
+            }
+
+            function updateUnitComparisonView() {
+                const comparisonCard = document.getElementById('unitComparisonCard');
+                if (!comparisonCard || unitComparisonsData.length === 0) return;
+
+                const currentComparison = unitComparisonsData[currentUnitIndex];
+
+                let comparisonItemsHTML = currentComparison.items.map((item, index) => `
+                    <div class="flex justify-between items-center py-3 border-b border-slate-800 last:border-b-0">
+                        <span class="font-medium ${index === 0 ? 'text-yellow-300' : 'text-slate-300'}">${index + 1}. ${item.name}</span>
+                        <span class="font-bold ${index === 0 ? 'text-yellow-300' : 'text-white'}">${item.unit_price}</span>
+                    </div>
+                `).join('');
+
+                comparisonCard.innerHTML = `
+                    <h3 class="flex items-center justify-between text-xl font-semibold text-cyan-400 mb-4">
+                        <span>${currentComparison.title}</span>
+                        <svg class="w-5 h-5 text-slate-500 group-hover:text-cyan-300 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691L7.985 5.944m0 0L4.804 9.126m3.182-3.182a8.25 8.25 0 0111.667 0l3.181 3.183" />
+                        </svg>
+                    </h3>
+                    <div class="space-y-1">
+                        ${comparisonItemsHTML}
+                    </div>
+                `;
+            }
+            
+            function cycleUnits() {
+                if (unitComparisonsData.length > 1) {
+                    currentUnitIndex = (currentUnitIndex + 1) % unitComparisonsData.length;
+                    updateUnitComparisonView();
+                }
+          
+            function initializeApp() {
+                renderUI();
+            }
+
+            resetBtn.addEventListener('click', resetView);
+            
+            // Initial setup
+            initializeApp();
+        </script>
+
+
+    <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+        apiKey: "AIzaSyChHxuXp29C41cvRbDrBnjhQ1fQSOylXk0",
+        authDomain: "pricesnap-4b96a.firebaseapp.com",
+        projectId: "pricesnap-4b96a",
+        storageBucket: "pricesnap-4b96a.firebasestorage.app",
+        messagingSenderId: "366457318522",
+        appId: "1:366457318522:web:124d0ef45128f77a51dfc3",
+        measurementId: "G-8F8908MCPK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    </script>   
+
+
+    </body>
+    </html>
