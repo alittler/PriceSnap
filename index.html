@@ -85,14 +85,17 @@
                 </ul>
             </div>
         </div>
+
     </div>
 
-    <script>
+    <script type="module">
+        // --- App State and Constants ---
         const MAX_IMAGES = 5;
         let uploadedImages = [];
         let unitComparisonsData = [];
         let currentUnitIndex = 0;
 
+        // --- DOM Elements ---
         const imageSlotsContainer = document.getElementById('imageSlotsContainer');
         const resetBtn = document.getElementById('resetBtn');
         const resultsContainer = document.getElementById('resultsContainer');
@@ -100,7 +103,8 @@
         const resultsContent = document.getElementById('resultsContent');
         const errorContent = document.getElementById('errorContent');
         const priceListContainer = document.getElementById('priceListContainer');
-        
+
+        // --- UI Rendering ---
         function handleFileSelect(event) {
             const file = event.target.files[0];
             const index = parseInt(event.target.dataset.index, 10);
@@ -113,12 +117,9 @@
                     src: base64String,
                     base64: base64String.split(',')[1]
                 };
-                renderUI(); // Re-render the whole UI
-                
-                // Scroll to the new slot
+                renderUI();
                 setTimeout(() => {
-                    const allSlots = imageSlotsContainer.children;
-                    const lastSlot = allSlots[allSlots.length - 1];
+                    const lastSlot = imageSlotsContainer.children[imageSlotsContainer.children.length - 1];
                     if (lastSlot) {
                         lastSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
@@ -139,18 +140,8 @@
             const label = document.createElement('label');
             label.htmlFor = fileId;
             label.className = "cursor-pointer group w-full max-w-sm h-64 md:h-80 bg-slate-900/50 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-800 transition-all duration-300 hover:border-cyan-500 hover:bg-slate-900";
-            label.innerHTML = `
-                <div class="text-center p-6 w-full h-full flex flex-col items-center justify-center relative">
-                    <div class="transition-transform duration-300 group-hover:scale-105">
-                        <svg class="w-16 h-16 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
-                        <p class="text-xs text-slate-500">Tap to use camera</p>
-                    </div>
-                </div>
-                <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
-            `;
-            const input = label.querySelector('input');
-            input.addEventListener('change', handleFileSelect);
+            label.innerHTML = `<div class="text-center p-6 w-full h-full flex flex-col items-center justify-center relative"><div class="transition-transform duration-300 group-hover:scale-105"><svg class="w-16 h-16 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p><p class="text-xs text-slate-500">Tap to use camera</p></div></div><input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">`;
+            label.querySelector('input').addEventListener('change', handleFileSelect);
             return label;
         }
 
@@ -158,47 +149,34 @@
             const fileId = `file-${index}`;
             const container = document.createElement('div');
             container.className = "w-full max-w-sm h-64 md:h-80 bg-slate-900/50 rounded-2xl flex flex-col border-2 border-dashed border-slate-800 overflow-hidden";
-            
-            container.innerHTML = `
-                <label for="${fileId}" class="group cursor-pointer h-1/2 flex items-center justify-center transition-all duration-300 hover:bg-slate-900 relative p-4">
-                    <div class="transition-transform duration-300 group-hover:scale-105 text-center">
-                        <svg class="w-12 h-12 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
-                    </div>
-                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
-                </label>
-                <div class="border-t-2 border-dashed border-slate-800"></div>
-                <button class="w-full h-1/2 bg-slate-900/50 hover:bg-slate-800 transition-colors text-cyan-400 font-semibold flex items-center justify-center p-4 text-lg">
-                    Calculate Best Deal
-                </button>
-            `;
-            
-            const input = container.querySelector(`#${fileId}`);
-            input.addEventListener('change', handleFileSelect);
-
-            const compareBtn = container.querySelector('button');
-            compareBtn.addEventListener('click', callGemini);
-            
+            container.innerHTML = `<label for="${fileId}" class="group cursor-pointer h-1/2 flex items-center justify-center transition-all duration-300 hover:bg-slate-900 relative p-4"><div class="transition-transform duration-300 group-hover:scale-105 text-center"><svg class="w-12 h-12 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p></div><input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden"></label><div class="border-t-2 border-dashed border-slate-800"></div><button class="w-full h-1/2 bg-slate-900/50 hover:bg-slate-800 transition-colors text-cyan-400 font-semibold flex items-center justify-center p-4 text-lg">Calculate Best Deal</button>`;
+            container.querySelector(`#${fileId}`).addEventListener('change', handleFileSelect);
+            container.querySelector('button').addEventListener('click', callGemini);
             return container;
         }
 
         function renderUI() {
-            imageSlotsContainer.innerHTML = ''; 
-            
+            imageSlotsContainer.innerHTML = '';
             uploadedImages.forEach((imgData, index) => {
-                const filledSlot = createFilledSlot(imgData.src, index);
-                imageSlotsContainer.appendChild(filledSlot);
+                imageSlotsContainer.appendChild(createFilledSlot(imgData.src, index));
             });
-
             const imageCount = uploadedImages.length;
-            
             if (imageCount < MAX_IMAGES) {
                 const nextSlot = (imageCount < 2) ? createNewImageSlot(imageCount) : createSpecialCompareSlot(imageCount);
                 imageSlotsContainer.appendChild(nextSlot);
             }
         }
-        
+
+        // --- API Call and Results ---
         async function callGemini() {
+            // Check if running from a local file, which won't work with the API route.
+            if (window.location.protocol === 'file:') {
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                displayError("This feature can't run from a local file. Please use the Vercel deployment or a local server.");
+                return;
+            }
+
             resultsContainer.classList.remove('hidden');
             loader.classList.remove('hidden');
             resultsContent.classList.add('hidden');
@@ -207,180 +185,86 @@
             document.getElementById('priceList').innerHTML = '';
             resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            const apiKey = ""; // Canvas will provide this
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            
-            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices from multiple images. For each image, identify the item, extract its price, and apply any visible discounts. First, present each item's details individually. Second, determine several logical common units (e.g., per lb, per oz, per kg, per 100g). Third, create an array of summary cards, one for each common unit, comparing all items by that unit with prices sorted from lowest to highest. Respond ONLY with the specified JSON object.`;
+            const apiUrl = `/api/gemini`;
+            const imagePayload = uploadedImages.filter(Boolean).map(img => ({ mimeType: "image/jpeg", data: img.base64 }));
 
-            const userPrompt = `Analyze these ${uploadedImages.filter(Boolean).length} images. Provide a summary of your findings in the requested JSON format.`;
-
-            const imageParts = uploadedImages.filter(Boolean).map(img => ({
-                inlineData: { mimeType: "image/jpeg", data: img.base64 }
-            }));
-
-            const payload = {
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ role: "user", parts: [{ text: userPrompt }, ...imageParts] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            comparison_summary: { type: "STRING" },
-                            reasoning: { type: "STRING" },
-                            items: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        name: { type: "STRING" },
-                                        description: { type: "STRING" },
-                                        price: { type: "STRING" },
-                                        rank: { type: "NUMBER" }
-                                    },
-                                    required: ["name", "description", "price", "rank"]
-                                }
-                            },
-                            unit_comparisons: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        title: { type: "STRING" },
-                                        items: {
-                                            type: "ARRAY",
-                                            items: {
-                                                type: "OBJECT",
-                                                properties: {
-                                                    name: { type: "STRING" },
-                                                    unit_price: { type: "STRING" }
-                                                },
-                                                required: ["name", "unit_price"]
-                                            }
-                                        }
-                                    },
-                                    required: ["title", "items"]
-                                }
-                            }
-                        },
-                        required: ["comparison_summary", "reasoning", "items", "unit_comparisons"]
-                    }
-                }
-            };
-            
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ images: imagePayload })
                 });
                 if (!response.ok) throw new Error(`API call failed: ${response.status}`);
-                const result = await response.json();
-                const candidate = result.candidates?.[0];
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const jsonResponse = JSON.parse(candidate.content.parts[0].text);
-                    displayResults(jsonResponse);
-                } else {
-                    displayError();
-                }
+                const jsonResponse = await response.json();
+                displayResults(jsonResponse);
             } catch (error) {
-                console.error("Error calling Gemini API:", error);
+                console.error("Error calling backend API:", error);
                 displayError();
             }
         }
 
         function displayResults(data) {
+            resultsContainer.classList.remove('hidden');
             document.getElementById('summary').textContent = data.comparison_summary;
             document.getElementById('reasoning').textContent = data.reasoning;
-            
             unitComparisonsData = data.unit_comparisons || [];
             currentUnitIndex = 0;
 
             const resultsGrid = document.getElementById('resultsGrid');
-            resultsGrid.innerHTML = ''; // Clear previous results
             const priceList = document.getElementById('priceList');
-            priceList.innerHTML = ''; // Clear previous list
+            resultsGrid.innerHTML = '';
+            priceList.innerHTML = '';
 
             data.items.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.id = `result-card-${index}`;
                 const isBestDeal = (item.rank === 1);
-                
+                const card = document.createElement('div');
                 card.className = `p-6 rounded-2xl border border-slate-800 bg-slate-900/50 transition-all duration-300 transform`;
-
                 let rankHTML = '';
                 if (data.items.length > 2) {
-                    let ordinal;
-                    if (item.rank === 1) ordinal = 'st';
-                    else if (item.rank === 2) ordinal = 'nd';
-                    else if (item.rank === 3) ordinal = 'rd';
-                    else ordinal = 'th';
+                    let ordinal = 'th';
+                    if (item.rank === 1) ordinal = 'st'; else if (item.rank === 2) ordinal = 'nd'; else if (item.rank === 3) ordinal = 'rd';
                     rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-cyan-400">${item.rank}</span><span class="text-2xl font-bold text-cyan-500">${ordinal}</span></div>`;
                 }
-
-                card.innerHTML = `
-                    ${rankHTML}
-                    <h3 class="text-lg font-semibold text-slate-300">${item.name}</h3>
-                    <p class="text-slate-400 text-sm">${item.description}</p>
-                    <p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>
-                    ${isBestDeal ? `<div class="mt-3 inline-block bg-yellow-400/20 text-yellow-300 text-xs font-semibold px-3 py-1 rounded-full">🏆 Best Deal</div>` : ''}
-                `;
+                card.innerHTML = `${rankHTML}<h3 class="text-lg font-semibold text-slate-300">${item.name}</h3><p class="text-slate-400 text-sm">${item.description}</p><p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>${isBestDeal ? `<div class="mt-3 inline-block bg-yellow-400/20 text-yellow-300 text-xs font-semibold px-3 py-1 rounded-full">🏆 Best Deal</div>` : ''}`;
                 resultsGrid.appendChild(card);
 
-                // Add to text list
                 const li = document.createElement('li');
                 li.className = `flex justify-between items-center p-3 rounded-lg ${isBestDeal ? 'bg-yellow-400/10' : ''}`;
-                
-                let namePart;
-                if (data.items.length > 2) {
-                    namePart = `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>`;
-                } else {
-                    namePart = `<span>${item.name}</span>`;
-                }
-
-                li.innerHTML = `
-                    <div class="flex items-center font-medium ${isBestDeal ? 'text-yellow-300' : 'text-slate-300'}">
-                        ${namePart}
-                    </div>
-                    <span class="${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-400'}">${item.price}</span>
-                `;
+                let namePart = data.items.length > 2 ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>` : `<span>${item.name}</span>`;
+                li.innerHTML = `<div class="flex items-center font-medium ${isBestDeal ? 'text-yellow-300' : 'text-slate-300'}">${namePart}</div><span class="${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-400'}">${item.price}</span>`;
                 priceList.appendChild(li);
             });
 
-            // Add the new Unit Comparison Card
             if (unitComparisonsData.length > 0) {
                 const comparisonCard = document.createElement('div');
-                comparisonCard.id = 'unitComparisonCard'; // Added ID for scrolling and interaction
+                comparisonCard.id = 'unitComparisonCard';
                 comparisonCard.className = `md:col-span-2 lg:col-span-3 p-6 rounded-2xl border border-cyan-500 bg-slate-900 text-left cursor-pointer group`;
                 comparisonCard.addEventListener('click', cycleUnits);
                 resultsGrid.appendChild(comparisonCard);
-                updateUnitComparisonView(); // Initial population of the card
+                updateUnitComparisonView();
             }
-
 
             loader.classList.add('hidden');
             resultsContent.classList.remove('hidden');
             errorContent.classList.add('hidden');
             priceListContainer.classList.remove('hidden');
-            
-            // Show reset button
             resetBtn.parentElement.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
-
+            
             setTimeout(() => {
                 const comparisonTable = document.getElementById('unitComparisonCard');
-                if(comparisonTable) {
-                    comparisonTable.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                if(comparisonTable) comparisonTable.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
+            
         }
 
-        function displayError() {
+        function displayError(message = "The AI could not process the images. Please try again with clearer photos.") {
             loader.classList.add('hidden');
             resultsContent.classList.add('hidden');
+            const errorContentDiv = document.getElementById('errorContent');
+            errorContentDiv.querySelector('p').textContent = message;
             errorContent.classList.remove('hidden');
             priceListContainer.classList.add('hidden');
-            // Show reset button on error too
             resetBtn.parentElement.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
         }
@@ -389,15 +273,13 @@
             uploadedImages = [];
             unitComparisonsData = [];
             currentUnitIndex = 0;
-            
             resultsContainer.classList.add('hidden');
             loader.classList.add('hidden');
             resultsContent.classList.add('hidden');
             errorContent.classList.add('hidden');
-            
             resetBtn.parentElement.classList.add('hidden');
             resetBtn.classList.add('hidden');
-            
+            priceListContainer.classList.add('hidden'); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
             renderUI();
         }
@@ -405,27 +287,9 @@
         function updateUnitComparisonView() {
             const comparisonCard = document.getElementById('unitComparisonCard');
             if (!comparisonCard || unitComparisonsData.length === 0) return;
-
             const currentComparison = unitComparisonsData[currentUnitIndex];
-
-            let comparisonItemsHTML = currentComparison.items.map((item, index) => `
-                <div class="flex justify-between items-center py-3 border-b border-slate-800 last:border-b-0">
-                    <span class="font-medium ${index === 0 ? 'text-yellow-300' : 'text-slate-300'}">${index + 1}. ${item.name}</span>
-                    <span class="font-bold ${index === 0 ? 'text-yellow-300' : 'text-white'}">${item.unit_price}</span>
-                </div>
-            `).join('');
-
-            comparisonCard.innerHTML = `
-                <h3 class="flex items-center justify-between text-xl font-semibold text-cyan-400 mb-4">
-                    <span>${currentComparison.title}</span>
-                    <svg class="w-5 h-5 text-slate-500 group-hover:text-cyan-300 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691L7.985 5.944m0 0L4.804 9.126m3.182-3.182a8.25 8.25 0 0111.667 0l3.181 3.183" />
-                    </svg>
-                </h3>
-                <div class="space-y-1">
-                    ${comparisonItemsHTML}
-                </div>
-            `;
+            let comparisonItemsHTML = currentComparison.items.map((item, index) => `<div class="flex justify-between items-center py-3 border-b border-slate-800 last:border-b-0"><span class="font-medium ${index === 0 ? 'text-yellow-300' : 'text-slate-300'}">${index + 1}. ${item.name}</span><span class="font-bold ${index === 0 ? 'text-yellow-300' : 'text-white'}">${item.unit_price}</span></div>`).join('');
+            comparisonCard.innerHTML = `<h3 class="flex items-center justify-between text-xl font-semibold text-cyan-400 mb-4"><span>${currentComparison.title}</span><svg class="w-5 h-5 text-slate-500 group-hover:text-cyan-300 transition-colors" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691L7.985 5.944m0 0L4.804 9.126m3.182-3.182a8.25 8.25 0 0111.667 0l3.181 3.183" /></svg></h3><div class="space-y-1">${comparisonItemsHTML}</div>`;
         }
         
         function cycleUnits() {
@@ -434,15 +298,14 @@
                 updateUnitComparisonView();
             }
         }
-
-        function initializeApp() {
+        
+        // --- App Initialization ---
+        function startApp() {
             renderUI();
         }
 
         resetBtn.addEventListener('click', resetView);
-        
-        // Initial setup
-        initializeApp();
+        startApp();
     </script>
 </body>
 </html>
