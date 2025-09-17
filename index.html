@@ -66,8 +66,10 @@
 
         <!-- Action Buttons -->
         <div id="actionButtons" class="text-center mt-8">
-            <button id="resetBtn" class="hidden w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-10 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50">
-                Start Over
+            <button id="resetBtn" title="Start Over" class="hidden w-14 h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold p-3 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-full h-full">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 11.667 0l3.181-3.183m-4.991-2.691L7.985 5.944m0 0 4.242 4.243" />
+                </svg>
             </button>
         </div>
 
@@ -189,7 +191,7 @@
                         </svg>
                         <p class="mt-2 text-white font-semibold text-center">Change Photo</p>
                     </div>
-                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                    <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
                 </label>
                 <button data-remove-index="${index}" class="absolute top-3 right-3 z-10 p-2 bg-slate-900/50 hover:bg-red-600/80 rounded-full transition-colors">
                     <svg class="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -211,10 +213,10 @@
                     <div class="transition-transform duration-300 group-hover:scale-105">
                         <svg class="w-16 h-16 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
-                        <p class="text-xs text-slate-500">Tap to use camera</p>
+                        <p class="text-xs text-slate-500">Tap to use camera or gallery</p>
                     </div>
                 </div>
-                <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
             `;
             const input = label.querySelector('input');
             input.addEventListener('change', handleFileSelect);
@@ -232,7 +234,7 @@
                         <svg class="w-12 h-12 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
                     </div>
-                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                    <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
                 </label>
                 <div class="border-t-2 border-dashed border-slate-800"></div>
                 <button class="w-full h-1/2 bg-slate-900/50 hover:bg-slate-800 transition-colors text-cyan-400 font-semibold flex items-center justify-center p-4 text-lg">
@@ -325,7 +327,7 @@
             const apiKey = "AIzaSyAeqR2CjRgeRKSrauhOG2JvYU4ZqEnnBpA";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
-            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), and 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'). For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Respond ONLY with the specified JSON object.`;
+            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each' (e.g., avocados, steaks), use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
 
             const imageParts = uploadedImages.filter(Boolean).map(img => ({
                 inline_data: { mime_type: "image/jpeg", data: img.base64 }
@@ -387,9 +389,10 @@
                                 rank: { type: "NUMBER" },
                                 price_per_kg: { type: "NUMBER" },
                                 price_per_lb: { type: "NUMBER" },
-                                conversion_details: { type: "STRING" }
+                                conversion_details: { type: "STRING" },
+                                is_estimated: { type: "BOOLEAN" }
                             },
-                            required: ["name", "description", "price", "rank", "price_per_kg", "price_per_lb", "conversion_details"]
+                            required: ["name", "description", "price", "rank", "price_per_kg", "price_per_lb", "conversion_details", "is_estimated"]
                         }
                     }
                 },
@@ -417,7 +420,7 @@
                 };
                 
                 const isBestDeal = (cleanedItem.rank === 1);
-                resultsGrid.appendChild(createResultCard(cleanedItem, isBestDeal));
+                resultsGrid.appendChild(createResultCard(cleanedItem, isBestDeal, sortedItems.length));
                 priceList.appendChild(createPriceListItem(cleanedItem, isBestDeal, sortedItems.length > 2));
             });
 
@@ -434,7 +437,7 @@
             }, 100);
         }
         
-        function createResultCard(item, isBestDeal) {
+        function createResultCard(item, isBestDeal, totalItems) {
             const card = document.createElement('div');
             if (isBestDeal) card.id = 'best-deal-card';
 
@@ -442,9 +445,10 @@
             
             card.dataset.priceKg = item.price_per_kg;
             card.dataset.priceLb = item.price_per_lb;
+            card.dataset.isEstimated = item.is_estimated;
 
             let rankHTML = '';
-            if (document.querySelectorAll('[data-remove-index]').length > 2) {
+            if (totalItems > 1) {
                 const ordinals = {1: 'st', 2: 'nd', 3: 'rd'};
                 const ordinal = ordinals[item.rank] || 'th';
                 rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-cyan-400">${item.rank}</span><span class="text-2xl font-bold text-cyan-500">${ordinal}</span></div>`;
@@ -452,12 +456,13 @@
             
             const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` : null;
             const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` : null;
+            const estText = item.is_estimated ? ' (est.)' : '';
 
             let unitPriceText = '';
             if (currentDisplayUnit === 'kg') {
-                unitPriceText = kgPrice || '';
+                unitPriceText = kgPrice ? kgPrice + estText : '';
             } else { // currentDisplayUnit is 'lb'
-                unitPriceText = lbPrice || '';
+                unitPriceText = lbPrice ? lbPrice + estText : '';
             }
 
             card.innerHTML = `
@@ -479,9 +484,10 @@
             li.className = `flex justify-between items-center p-3 rounded-lg ${isBestDeal ? 'bg-yellow-400/10' : ''}`;
             
             const namePart = showRank ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>` : `<span>${item.name}</span>`;
+            const estText = item.is_estimated ? ' (est.)' : '';
             
-            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` : null;
-            const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` : null;
+            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` + estText : null;
+            const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` + estText : null;
 
             let unitPriceHTML = '';
             if (kgPrice && lbPrice) unitPriceHTML = `<p class="text-sm text-slate-500 mt-1">${kgPrice} &bull; ${lbPrice}</p>`;
@@ -549,9 +555,11 @@
 
                 const kgPriceNum = parseFloat(card.dataset.priceKg);
                 const lbPriceNum = parseFloat(card.dataset.priceLb);
+                const isEstimated = card.dataset.isEstimated === 'true';
+                const estText = isEstimated ? ' (est.)' : '';
                 
-                const kgPrice = kgPriceNum > 0 ? `$${kgPriceNum.toFixed(2)} / kg` : null;
-                const lbPrice = lbPriceNum > 0 ? `$${lbPriceNum.toFixed(2)} / lb` : null;
+                const kgPrice = kgPriceNum > 0 ? `$${kgPriceNum.toFixed(2)} / kg` + estText : null;
+                const lbPrice = lbPriceNum > 0 ? `$${lbPriceNum.toFixed(2)} / lb` + estText : null;
                 
                 if (currentDisplayUnit === 'kg') {
                     unitPriceDisplay.textContent = kgPrice || ''; // Show kg price or nothing
