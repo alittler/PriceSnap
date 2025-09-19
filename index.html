@@ -35,6 +35,13 @@
             box-shadow: 0 0 15px 4px rgba(250, 204, 21, 0.4); /* amber-300 glow */
             border-color: #FBBF24 !important; /* amber-400 */
         }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #06b6d4; /* cyan-500 */
+            background-color: #1e293b; /* slate-800 */
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: -2px -4px;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
@@ -50,7 +57,7 @@
                 </svg>
                 <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 text-transparent bg-clip-text">PriceSnap</h1>
             </div>
-            <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal.</p>
+            <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal. <button id="sampleBtn" class="text-cyan-400 hover:text-cyan-300 underline">Or use sample photos</button></p>
         </header>
 
         <!-- API Selector -->
@@ -65,9 +72,9 @@
         </main>
 
         <!-- Action Buttons -->
-        <div id="actionButtons" class="text-center mt-8">
-            <button id="resetBtn" class="hidden w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-10 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50">
-                Start Over
+        <div id="actionButtons" class="mt-8 flex justify-center">
+            <button id="resetBtn" title="Start Over" class="hidden w-14 h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50 flex items-center justify-center text-3xl">
+                ♻️
             </button>
         </div>
 
@@ -121,7 +128,6 @@
         const MAX_IMAGES = 5;
         let uploadedImages = [];
         let selectedAPI = 'gemini';
-        let currentDisplayUnit = 'kg'; // 'kg' or 'lb'
 
         const imageSlotsContainer = document.getElementById('imageSlotsContainer');
         const resetBtn = document.getElementById('resetBtn');
@@ -131,6 +137,7 @@
         const resultsContent = document.getElementById('resultsContent');
         const errorContent = document.getElementById('errorContent');
         const apiSelector = document.getElementById('apiSelector');
+        const sampleBtn = document.getElementById('sampleBtn');
         
         apiSelector.addEventListener('click', (e) => {
             if (e.target.tagName !== 'BUTTON') return;
@@ -189,7 +196,7 @@
                         </svg>
                         <p class="mt-2 text-white font-semibold text-center">Change Photo</p>
                     </div>
-                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                    <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
                 </label>
                 <button data-remove-index="${index}" class="absolute top-3 right-3 z-10 p-2 bg-slate-900/50 hover:bg-red-600/80 rounded-full transition-colors">
                     <svg class="w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -211,10 +218,10 @@
                     <div class="transition-transform duration-300 group-hover:scale-105">
                         <svg class="w-16 h-16 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
-                        <p class="text-xs text-slate-500">Tap to use camera</p>
+                        <p class="text-xs text-slate-500">Tap to use camera or gallery</p>
                     </div>
                 </div>
-                <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
             `;
             const input = label.querySelector('input');
             input.addEventListener('change', handleFileSelect);
@@ -232,7 +239,7 @@
                         <svg class="w-12 h-12 mx-auto text-slate-600 group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <p class="mt-2 font-semibold text-slate-400 group-hover:text-cyan-400">Add Photo ${index + 1}</p>
                     </div>
-                    <input type="file" id="${fileId}" accept="image/*" capture="environment" data-index="${index}" class="hidden">
+                    <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
                 </label>
                 <div class="border-t-2 border-dashed border-slate-800"></div>
                 <button class="w-full h-1/2 bg-slate-900/50 hover:bg-slate-800 transition-colors text-cyan-400 font-semibold flex items-center justify-center p-4 text-lg">
@@ -310,7 +317,7 @@
                     await callGeminiAPI();
                 } else {
                     loaderText.textContent = "Analyzing extracted text with AI...";
-                    await analyzeTextWithGemini(extractedTexts.join(''), "BETA");
+                    await analyzeTextWithGemini(extractedTexts.join(''), "BETA", extractedTexts.length);
                 }
 
             } catch (error) {
@@ -320,18 +327,18 @@
             }
         }
 
-        async function callGeminiAPI(prompt, methodUsed = "Gemini AI") {
+        async function callGeminiAPI(prompt, methodUsed = "Gemini AI", imageCount = uploadedImages.length) {
             loaderText.textContent = `Analyzing with ${methodUsed}...`;
             const apiKey = "AIzaSyAeqR2CjRgeRKSrauhOG2JvYU4ZqEnnBpA";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
-            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), and 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'). For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Respond ONLY with the specified JSON object.`;
+            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each' (e.g., avocados, steaks), use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
 
             const imageParts = uploadedImages.filter(Boolean).map(img => ({
                 inline_data: { mime_type: "image/jpeg", data: img.base64 }
             }));
             
-            const userPrompt = prompt || `Analyze these ${uploadedImages.length} images. Provide a summary of your findings in the requested JSON format.`;
+            const userPrompt = prompt || `Analyze these ${imageCount} images. Provide a summary of your findings in the requested JSON format.`;
             const contentParts = prompt ? [{ text: userPrompt }] : [{ text: userPrompt }, ...imageParts];
 
             const payload = {
@@ -349,7 +356,11 @@
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error('Gemini API Error:', errorBody);
-                    throw new Error('Gemini API request failed. Check your API key.');
+                    if (response.status === 403 && errorBody.error?.details?.[0]?.reason === 'SERVICE_DISABLED') {
+                        const activationUrl = errorBody.error.details[0].metadata.activationUrl;
+                        throw new Error(`The Generative Language API is not enabled. Please enable it here: ${activationUrl}`);
+                    }
+                    throw new Error('Gemini API request failed. Check your API key and permissions.');
                 }
                 const data = await response.json();
                 const jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text);
@@ -365,9 +376,9 @@
             }
         }
 
-        function analyzeTextWithGemini(text, methodUsed) {
-            const userPrompt = `Here is the text extracted from ${uploadedImages.length} images:\n\n${text}\n\nPlease analyze it and provide a summary of your findings in the requested JSON format.`;
-            return callGeminiAPI(userPrompt, methodUsed);
+        function analyzeTextWithGemini(text, methodUsed, imageCount) {
+            const userPrompt = `Here is the text extracted from ${imageCount} images:\n\n${text}\n\nPlease analyze it and provide a summary of your findings in the requested JSON format.`;
+            return callGeminiAPI(userPrompt, methodUsed, imageCount);
         }
         
         function getResponseSchema() {
@@ -387,9 +398,10 @@
                                 rank: { type: "NUMBER" },
                                 price_per_kg: { type: "NUMBER" },
                                 price_per_lb: { type: "NUMBER" },
-                                conversion_details: { type: "STRING" }
+                                conversion_details: { type: "STRING" },
+                                is_estimated: { type: "BOOLEAN" }
                             },
-                            required: ["name", "description", "price", "rank", "price_per_kg", "price_per_lb", "conversion_details"]
+                            required: ["name", "description", "price", "rank", "price_per_kg", "price_per_lb", "conversion_details", "is_estimated"]
                         }
                     }
                 },
@@ -417,7 +429,7 @@
                 };
                 
                 const isBestDeal = (cleanedItem.rank === 1);
-                resultsGrid.appendChild(createResultCard(cleanedItem, isBestDeal));
+                resultsGrid.appendChild(createResultCard(cleanedItem, isBestDeal, sortedItems.length));
                 priceList.appendChild(createPriceListItem(cleanedItem, isBestDeal, sortedItems.length > 2));
             });
 
@@ -434,41 +446,30 @@
             }, 100);
         }
         
-        function createResultCard(item, isBestDeal) {
+        function createResultCard(item, isBestDeal, totalItems) {
             const card = document.createElement('div');
             if (isBestDeal) card.id = 'best-deal-card';
 
-            card.className = `p-6 rounded-2xl border border-slate-800 bg-slate-900/50 transition-all duration-300 transform flex flex-col cursor-pointer result-card ${isBestDeal ? 'best-deal-glow' : ''}`;
+            card.className = `p-6 rounded-2xl border border-slate-800 bg-slate-900/50 transition-all duration-300 transform flex flex-col result-card ${isBestDeal ? 'best-deal-glow' : ''}`;
             
-            card.dataset.priceKg = item.price_per_kg;
-            card.dataset.priceLb = item.price_per_lb;
-
             let rankHTML = '';
-            if (document.querySelectorAll('[data-remove-index]').length > 2) {
-                const ordinals = {1: 'st', 2: 'nd', 3: 'rd'};
+            if (totalItems > 1 && item.rank > 1) {
+                const ordinals = {2: 'nd', 3: 'rd'};
                 const ordinal = ordinals[item.rank] || 'th';
                 rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-cyan-400">${item.rank}</span><span class="text-2xl font-bold text-cyan-500">${ordinal}</span></div>`;
-            }
-            
-            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` : null;
-            const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` : null;
-
-            let unitPriceText = '';
-            if (currentDisplayUnit === 'kg') {
-                unitPriceText = kgPrice || '';
-            } else { // currentDisplayUnit is 'lb'
-                unitPriceText = lbPrice || '';
+            } else if (isBestDeal && totalItems > 1) {
+                 rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-amber-300">1</span><span class="text-2xl font-bold text-amber-400">st</span></div>`;
             }
 
             card.innerHTML = `
                 <div class="flex-grow">
                     ${rankHTML}
-                    <h3 class="text-lg font-semibold text-slate-300">${item.name}</h3>
-                    <p class="text-slate-400 text-sm">${item.description}</p>
+                    <h3 class="text-lg font-semibold text-slate-300" contenteditable="true">${item.name}</h3>
+                    <p class="text-slate-400 text-sm" contenteditable="true">${item.description}</p>
                 </div>
                 <div>
-                    <p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>
-                    <p class="unit-price-display text-sm text-slate-400 mt-1">${unitPriceText}</p>
+                    <p class="text-xl sm:text-2xl font-bold text-white mt-1" contenteditable="true">${item.price}</p>
+                    <p class="text-sm text-slate-500 mt-1">${item.conversion_details}</p>
                 </div>
             `;
             return card;
@@ -478,10 +479,11 @@
             const li = document.createElement('li');
             li.className = `flex justify-between items-center p-3 rounded-lg ${isBestDeal ? 'bg-yellow-400/10' : ''}`;
             
-            const namePart = showRank ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>` : `<span>${item.name}</span>`;
+            const namePart = showRank ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2" contenteditable="true">${item.name}</span>` : `<span contenteditable="true">${item.name}</span>`;
+            const estText = item.is_estimated ? ' (est.)' : '';
             
-            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` : null;
-            const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` : null;
+            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` + estText : null;
+            const lbPrice = item.price_per_lb > 0 ? `$${item.price_per_lb.toFixed(2)} / lb` + estText : null;
 
             let unitPriceHTML = '';
             if (kgPrice && lbPrice) unitPriceHTML = `<p class="text-sm text-slate-500 mt-1">${kgPrice} &bull; ${lbPrice}</p>`;
@@ -495,7 +497,7 @@
                     </div>
                     ${unitPriceHTML}
                 </div>
-                <span class="text-lg ${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-300'}">${item.price}</span>
+                <span class="text-lg ${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-300'}" contenteditable="true">${item.price}</span>
             `;
             return li;
         }
@@ -513,7 +515,6 @@
 
         function resetView() {
             uploadedImages = [];
-            currentDisplayUnit = 'kg'; // Reset the unit display
             
             resultsContainer.classList.add('hidden');
             loader.classList.add('hidden');
@@ -524,8 +525,7 @@
             priceListContainer.querySelector('ul').innerHTML = '';
             priceListContainer.classList.add('hidden');
             
-            resetBtn.parentElement.classList.remove('hidden');
-            resetBtn.classList.remove('hidden');
+            resetBtn.parentElement.classList.add('hidden');
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
             renderUI();
@@ -535,32 +535,29 @@
             uploadedImages.splice(index, 1);
             renderUI();
         }
-
-        function toggleDisplayUnit() {
-            currentDisplayUnit = currentDisplayUnit === 'kg' ? 'lb' : 'kg';
-            updateAllCardUnits();
-        }
-
-        function updateAllCardUnits() {
-            const cards = document.querySelectorAll('.result-card');
-            cards.forEach(card => {
-                const unitPriceDisplay = card.querySelector('.unit-price-display');
-                if (!unitPriceDisplay) return;
-
-                const kgPriceNum = parseFloat(card.dataset.priceKg);
-                const lbPriceNum = parseFloat(card.dataset.priceLb);
-                
-                const kgPrice = kgPriceNum > 0 ? `$${kgPriceNum.toFixed(2)} / kg` : null;
-                const lbPrice = lbPriceNum > 0 ? `$${lbPriceNum.toFixed(2)} / lb` : null;
-                
-                if (currentDisplayUnit === 'kg') {
-                    unitPriceDisplay.textContent = kgPrice || ''; // Show kg price or nothing
-                } else { // currentDisplayUnit is 'lb'
-                    unitPriceDisplay.textContent = lbPrice || ''; // Show lb price or nothing
+        
+        async function useSamplePhotos() {
+            resetView();
+            const samples = [
+                {
+                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=NY+Striploin+Steak%0A%2414.99+%2F+lb%0A%0ATotal%3A+%2425.48%0AWeight%3A+1.7+lbs',
+                    text: 'Image 1: NY Striploin Steak, $14.99 / lb, Total: $25.48, Weight: 1.7 lbs'
+                },
+                {
+                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=Chicken+Thighs%0A%245.49+%2F+kg%0A%0ATotal%3A+%248.78%0AWeight%3A+1.6+kg',
+                    text: 'Image 2: Chicken Thighs, $5.49 / kg, Total: $8.78, Weight: 1.6 kg'
+                },
+                {
+                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=Avocados%0A%241.99+each',
+                    text: 'Image 3: Avocados, $1.99 each'
                 }
-            });
+            ];
+            uploadedImages = samples.map(s => ({ src: s.src, base64: '' }));
+            renderUI();
+            prepareForAnalysis();
+            const combinedText = samples.map(s => s.text).join('\n');
+            await analyzeTextWithGemini(combinedText, "Sample Data", samples.length);
         }
-
 
         function initializeApp() {
             renderUI();
@@ -573,13 +570,9 @@
                     removeImage(parseInt(removeButton.dataset.removeIndex, 10));
                     return;
                 }
-
-                const resultCard = e.target.closest('.result-card');
-                if (resultCard) {
-                    toggleDisplayUnit();
-                    return;
-                }
             });
+            resetBtn.addEventListener('click', resetView);
+            sampleBtn.addEventListener('click', useSamplePhotos);
         }
 
         // Initial setup
@@ -587,4 +580,5 @@
     </script>
 </body>
 </html>
+
 
