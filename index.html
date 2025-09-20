@@ -24,24 +24,9 @@
             object-fit: cover; /* This will crop and center the image */
             border-radius: 0.75rem; /* rounded-lg */
         }
-        /* Custom styles for API Selector */
-        .api-option-btn {
-            transition: all 0.2s ease-in-out;
-        }
-        .api-option-btn.selected {
-            background-color: #06b6d4; /* cyan-500 */
-            color: #fff;
-        }
         .best-deal-glow {
             box-shadow: 0 0 15px 4px rgba(250, 204, 21, 0.4); /* amber-300 glow */
             border-color: #FBBF24 !important; /* amber-400 */
-        }
-        [contenteditable="true"]:focus {
-            outline: 2px solid #06b6d4; /* cyan-500 */
-            background-color: #1e293b; /* slate-800 */
-            border-radius: 4px;
-            padding: 2px 4px;
-            margin: -2px -4px;
         }
     </style>
 </head>
@@ -60,12 +45,6 @@
             </div>
             <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal. <button id="sampleBtn" class="text-cyan-400 hover:text-cyan-300 underline">Or use sample photos</button></p>
         </header>
-
-        <!-- API Selector -->
-        <div id="apiSelector" class="flex items-center justify-center p-1 bg-slate-800 rounded-full mb-8 max-w-md mx-auto">
-            <button data-api="gemini" class="api-option-btn selected w-1/2 py-2 px-4 rounded-full font-semibold text-sm">Gemini AI</button>
-            <button data-api="tesseract" class="api-option-btn w-1/2 py-2 px-4 rounded-full font-semibold text-sm text-slate-400 bg-slate-800">BETA</button>
-        </div>
 
         <!-- Main Comparison Area -->
         <main id="imageSlotsContainer" class="flex flex-wrap justify-center gap-6">
@@ -111,9 +90,6 @@
                 <div class="mt-8 max-w-4xl mx-auto">
                     <div class="flex justify-between items-center">
                         <h3 class="text-lg font-semibold text-slate-300 text-center">Math Steps</h3>
-                        <button id="recalculateBtn" class="hidden bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-cyan-500/50">
-                            Recalculate Prices
-                        </button>
                     </div>
                     <p id="mathSteps" class="text-slate-400 bg-slate-800/50 border border-slate-700 p-4 rounded-xl mt-2 whitespace-pre-line"></p>
                 </div>
@@ -126,15 +102,13 @@
         </div>
 
         <footer class="text-center mt-12 mb-4">
-            <p class="text-xs text-slate-600">PriceSnap v2025.09.19</p>
+            <p class="text-xs text-slate-600">PriceSnap build-local</p>
         </footer>
     </div>
 
     <script>
         const MAX_IMAGES = 5;
         let uploadedImages = [];
-        let selectedAPI = 'gemini';
-        let currentDisplayUnit = 'kg'; // 'kg' or 'lb'
 
         const imageSlotsContainer = document.getElementById('imageSlotsContainer');
         const resetBtn = document.getElementById('resetBtn');
@@ -143,25 +117,8 @@
         const loaderText = document.getElementById('loaderText');
         const resultsContent = document.getElementById('resultsContent');
         const errorContent = document.getElementById('errorContent');
-        const apiSelector = document.getElementById('apiSelector');
         const sampleBtn = document.getElementById('sampleBtn');
         
-        apiSelector.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'BUTTON') return;
-            selectedAPI = e.target.dataset.api;
-            document.querySelectorAll('.api-option-btn').forEach(btn => {
-                btn.classList.remove('selected', 'text-white');
-                btn.classList.add('text-slate-400');
-                 if(btn.dataset.api === 'tesseract' && selectedAPI !== 'tesseract') {
-                    btn.classList.add('bg-slate-800');
-                } else {
-                    btn.classList.remove('bg-slate-800');
-                }
-            });
-            e.target.classList.add('selected', 'text-white');
-            e.target.classList.remove('text-slate-400', 'bg-slate-800');
-        });
-
         function handleFileSelect(event) {
             const file = event.target.files[0];
             const index = parseInt(event.target.dataset.index, 10);
@@ -286,58 +243,15 @@
         
         async function startAnalysis() {
             prepareForAnalysis();
-            switch (selectedAPI) {
-                case 'tesseract':
-                    await callTesseractAPI();
-                    break;
-                default:
-                    await callGeminiAPI();
-            }
+            await callGeminiAPI();
         }
         
-        async function callTesseractAPI() {
-            const validImages = uploadedImages.filter(Boolean);
-            const extractedTexts = [];
-            let fallbackNeeded = false;
-
-            try {
-                const worker = await Tesseract.createWorker('eng');
-                for (let i = 0; i < validImages.length; i++) {
-                    loaderText.textContent = `Performing on-device OCR... (${i + 1}/${validImages.length})`;
-                    const ret = await worker.recognize(validImages[i].src);
-                    const extractedText = ret.data.text.trim();
-
-                    if (extractedText) {
-                        extractedTexts.push(`--- Image ${i + 1} Text ---\n${extractedText}\n\n`);
-                    } else {
-                        console.log(`Tesseract failed on image ${i + 1}. Triggering fallback.`);
-                        fallbackNeeded = true;
-                        break; // Exit the loop immediately
-                    }
-                }
-                await worker.terminate();
-
-                if (fallbackNeeded) {
-                    loaderText.textContent = "On-device OCR failed on an image. Falling back to Gemini AI for all images...";
-                    await callGeminiAPI();
-                } else {
-                    loaderText.textContent = "Analyzing extracted text with AI...";
-                    await analyzeTextWithGemini(extractedTexts.join(''), "BETA", extractedTexts.length);
-                }
-
-            } catch (error) {
-                 console.error("A critical error occurred during the Tesseract process, falling back to full Gemini AI:", error);
-                 loaderText.textContent = "A critical error occurred. Falling back to Gemini AI...";
-                 await callGeminiAPI();
-            }
-        }
-
         async function callGeminiAPI(prompt, methodUsed = "Gemini AI", imageCount = uploadedImages.length) {
             loaderText.textContent = `Analyzing with ${methodUsed}...`;
             const apiKey = "AIzaSyDySp9D6chCo8LrWfzvxhxnCGFex8-DIPw";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
-            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. The 'rank' must be determined by sorting the items from lowest to highest based on their calculated price per kilogram ('price_per_kg'). Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each', use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
+            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and mathematically accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. The 'rank' must be determined by sorting the items from lowest to highest based on their calculated price per kilogram ('price_per_kg'). Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each', use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. All mathematical conversions and calculations MUST be accurate. For example, 1 lb = 0.453592 kg. If a price is $22.98 for 1.92 lb, the weight in kg is 1.92 * 0.453592 = 0.871 kg. The price per kg is $22.98 / 0.871 kg = $26.38. Your 'price_per_kg' value MUST reflect this accurate calculation. Respond ONLY with the specified JSON object.`;
 
             const imageParts = uploadedImages.filter(Boolean).map(img => ({
                 inline_data: { mime_type: "image/jpeg", data: img.base64 }
@@ -377,18 +291,8 @@
                 displayResults(jsonResponse, methodUsed);
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
-                if (methodUsed !== "Gemini AI") { // Avoid infinite loop
-                    loaderText.textContent = "Hybrid analysis failed. Falling back to full Gemini AI...";
-                    await callGeminiAPI();
-                } else {
-                    displayError(error.message);
-                }
+                displayError(error.message);
             }
-        }
-
-        function analyzeTextWithGemini(text, methodUsed, imageCount) {
-            const userPrompt = `Here is the text extracted from ${imageCount} images:\n\n${text}\n\nPlease analyze it and provide a summary of your findings in the requested JSON format.`;
-            return callGeminiAPI(userPrompt, methodUsed, imageCount);
         }
         
         function getResponseSchema() {
@@ -428,9 +332,17 @@
             const priceList = document.getElementById('priceList');
             priceList.innerHTML = ''; 
 
-            const sortedItems = data.items.sort((a, b) => a.rank - b.rank);
+            const sortedItems = data.items.sort((a, b) => {
+                const priceA = a.price_per_kg;
+                const priceB = b.price_per_kg;
+                if (priceA <= 0 && priceB > 0) return 1;
+                if (priceB <= 0 && priceA > 0) return -1;
+                if (priceA <= 0 && priceB <= 0) return 0;
+                return priceA - priceB;
+            });
 
-            sortedItems.forEach((item) => {
+            sortedItems.forEach((item, index) => {
+                item.rank = index + 1; // Re-assign rank based on correct sorting
                 const cleanedItem = {
                     ...item,
                     price: item.price.replace(/\\\$/g, '$'),
@@ -449,10 +361,6 @@
             document.getElementById('priceListContainer').classList.remove('hidden');
             resetBtn.parentElement.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
-
-            const recalculateBtn = document.getElementById('recalculateBtn');
-            recalculateBtn.classList.remove('hidden');
-            recalculateBtn.addEventListener('click', recalculatePrices);
 
             setTimeout(() => {
                 const bestDealCard = document.getElementById('best-deal-card');
@@ -481,12 +389,12 @@
             card.innerHTML = `
                 <div class="flex-grow">
                     ${rankHTML}
-                    <h3 class="text-lg font-semibold text-slate-300" contenteditable="true">${item.name}</h3>
-                    <p class="text-slate-400 text-sm" contenteditable="true">${item.description}</p>
+                    <h3 class="text-lg font-semibold text-slate-300">${item.name}</h3>
+                    <p class="text-slate-400 text-sm">${item.description}</p>
                 </div>
                 <div>
-                    <p class="text-xl sm:text-2xl font-bold text-white mt-1" contenteditable="true">${item.price}</p>
-                    <p class="text-sm text-slate-500 mt-1" contenteditable="true">${item.conversion_details}</p>
+                    <p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>
+                    <p class="text-sm text-slate-500 mt-1">(${kgPrice}${estText})</p>
                 </div>
             `;
             return card;
@@ -496,7 +404,7 @@
             const li = document.createElement('li');
             li.className = `flex justify-between items-center p-3 rounded-lg ${isBestDeal ? 'bg-yellow-400/10' : ''}`;
             
-            const namePart = showRank ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2" contenteditable="true">${item.name}</span>` : `<span contenteditable="true">${item.name}</span>`;
+            const namePart = showRank ? `<span class="w-6 text-slate-500">${item.rank}.</span><span class="ml-2">${item.name}</span>` : `<span>${item.name}</span>`;
             const estText = item.is_estimated ? ' (est.)' : '';
             
             const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` + estText : null;
@@ -514,7 +422,7 @@
                     </div>
                     ${unitPriceHTML}
                 </div>
-                <span class="text-lg ${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-300'}" contenteditable="true">${item.price}</span>
+                <span class="text-lg ${isBestDeal ? 'text-yellow-300 font-bold' : 'text-slate-300'}">${item.price}</span>
             `;
             return li;
         }
@@ -574,26 +482,6 @@
             prepareForAnalysis();
             const combinedText = samples.map(s => s.text).join('\n');
             await analyzeTextWithGemini(combinedText, "Sample Data", samples.length);
-        }
-
-        async function recalculatePrices() {
-            prepareForAnalysis();
-            loaderText.textContent = 'Recalculating based on your edits...';
-
-            const itemDescriptions = [];
-            const resultsGrid = document.getElementById('resultsGrid');
-            resultsGrid.querySelectorAll('.result-card').forEach((card, index) => {
-                const name = card.querySelector('h3').innerText;
-                const description = card.querySelector('p.text-sm[contenteditable="true"]').innerText;
-                const price = card.querySelector('p.text-xl').innerText;
-                const conversion = card.querySelector('p.text-sm.text-slate-500').innerText;
-                
-                let textBlock = `Item: ${name}, ${description}, Price: ${price}, Details: ${conversion}`;
-                itemDescriptions.push(textBlock);
-            });
-
-            const combinedText = itemDescriptions.join('\n\n');
-            await analyzeTextWithGemini(combinedText, "Recalculation", itemDescriptions.length);
         }
 
         function initializeApp() {
