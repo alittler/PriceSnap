@@ -6,6 +6,7 @@
     <title>PriceSnap</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+ <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/3.0.0/uicons-bold-rounded/css/uicons-bold-rounded.css'>   
     <!-- Tesseract.js CDN -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
@@ -73,8 +74,8 @@
 
         <!-- Action Buttons -->
         <div id="actionButtons" class="mt-8 flex justify-center">
-            <button id="resetBtn" title="Start Over" class="hidden w-14 h-14 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50 flex items-center justify-center text-3xl">
-                ♻️
+             <button id="resetBtn" class="hidden w-full max-w-sm bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 px-10 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-slate-600/50">
+                Start New Comparison
             </button>
         </div>
 
@@ -108,7 +109,12 @@
                 </div>
 
                 <div class="mt-8 max-w-4xl mx-auto">
-                    <h3 class="text-lg font-semibold text-slate-300 text-center">Math Steps</h3>
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-slate-300 text-center">Math Steps</h3>
+                        <button id="recalculateBtn" class="hidden bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-cyan-500/50">
+                            Recalculate Prices
+                        </button>
+                    </div>
                     <p id="mathSteps" class="text-slate-400 bg-slate-800/50 border border-slate-700 p-4 rounded-xl mt-2 whitespace-pre-line"></p>
                 </div>
             </div>
@@ -128,6 +134,7 @@
         const MAX_IMAGES = 5;
         let uploadedImages = [];
         let selectedAPI = 'gemini';
+        let currentDisplayUnit = 'kg'; // 'kg' or 'lb'
 
         const imageSlotsContainer = document.getElementById('imageSlotsContainer');
         const resetBtn = document.getElementById('resetBtn');
@@ -191,9 +198,7 @@
                 <label for="${fileId}" class="absolute inset-0 cursor-pointer">
                     <img src="${src}" class="absolute top-0 left-0 image-preview transition-transform duration-300 group-hover:scale-105" alt="Grocery item ${index + 1}">
                     <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
-                        <svg class="w-12 h-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.181-3.183m-4.991-2.691L7.985 5.944m0 0L4.804 9.126m3.182-3.182a8.25 8.25 0 0111.667 0l3.181 3.183" />
-                        </svg>
+                        <i class="fi fi-br-image-slash text-4xl text-white"></i>
                         <p class="mt-2 text-white font-semibold text-center">Change Photo</p>
                     </div>
                     <input type="file" id="${fileId}" accept="image/*" data-index="${index}" class="hidden">
@@ -332,7 +337,7 @@
             const apiKey = "AIzaSyDySp9D6chCo8LrWfzvxhxnCGFex8-DIPw";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
-            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each' (e.g., avocados, steaks), use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
+            const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. The 'rank' must be determined by sorting the items from lowest to highest based on their calculated price per kilogram ('price_per_kg'). Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each', use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
 
             const imageParts = uploadedImages.filter(Boolean).map(img => ({
                 inline_data: { mime_type: "image/jpeg", data: img.base64 }
@@ -445,6 +450,10 @@
             resetBtn.parentElement.classList.remove('hidden');
             resetBtn.classList.remove('hidden');
 
+            const recalculateBtn = document.getElementById('recalculateBtn');
+            recalculateBtn.classList.remove('hidden');
+            recalculateBtn.addEventListener('click', recalculatePrices);
+
             setTimeout(() => {
                 const bestDealCard = document.getElementById('best-deal-card');
                 bestDealCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -466,6 +475,9 @@
                  rankHTML = `<div class="mb-2"><span class="text-4xl font-bold text-amber-300">1</span><span class="text-2xl font-bold text-amber-400">st</span></div>`;
             }
 
+            const estText = item.is_estimated ? ' (est.)' : '';
+            const kgPrice = item.price_per_kg > 0 ? `$${item.price_per_kg.toFixed(2)} / kg` : 'N/A';
+
             card.innerHTML = `
                 <div class="flex-grow">
                     ${rankHTML}
@@ -474,7 +486,7 @@
                 </div>
                 <div>
                     <p class="text-xl sm:text-2xl font-bold text-white mt-1" contenteditable="true">${item.price}</p>
-                    <p class="text-sm text-slate-500 mt-1">${item.conversion_details}</p>
+                    <p class="text-sm text-slate-500 mt-1" contenteditable="true">${item.conversion_details}</p>
                 </div>
             `;
             return card;
@@ -562,6 +574,26 @@
             prepareForAnalysis();
             const combinedText = samples.map(s => s.text).join('\n');
             await analyzeTextWithGemini(combinedText, "Sample Data", samples.length);
+        }
+
+        async function recalculatePrices() {
+            prepareForAnalysis();
+            loaderText.textContent = 'Recalculating based on your edits...';
+
+            const itemDescriptions = [];
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.querySelectorAll('.result-card').forEach((card, index) => {
+                const name = card.querySelector('h3').innerText;
+                const description = card.querySelector('p.text-sm[contenteditable="true"]').innerText;
+                const price = card.querySelector('p.text-xl').innerText;
+                const conversion = card.querySelector('p.text-sm.text-slate-500').innerText;
+                
+                let textBlock = `Item: ${name}, ${description}, Price: ${price}, Details: ${conversion}`;
+                itemDescriptions.push(textBlock);
+            });
+
+            const combinedText = itemDescriptions.join('\n\n');
+            await analyzeTextWithGemini(combinedText, "Recalculation", itemDescriptions.length);
         }
 
         function initializeApp() {
