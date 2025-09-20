@@ -120,7 +120,7 @@
         </div>
 
         <footer class="text-center mt-12 mb-4">
-            <p class="text-xs text-slate-600">PriceSnap v1.2.0</p>
+            <p class="text-xs text-slate-600">PriceSnap v2025.09.19</p>
         </footer>
     </div>
 
@@ -329,7 +329,7 @@
 
         async function callGeminiAPI(prompt, methodUsed = "Gemini AI", imageCount = uploadedImages.length) {
             loaderText.textContent = `Analyzing with ${methodUsed}...`;
-            const apiKey = "AIzaSyAeqR2CjRgeRKSrauhOG2JvYU4ZqEnnBpA";
+            const apiKey = "AIzaSyDySp9D6chCo8LrWfzvxhxnCGFex8-DIPw";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
             const systemPrompt = `You are an expert AI assistant specializing in comparing grocery prices. Your primary goal is to provide a complete and accurate comparison. For each item (from image or text), identify the product, extract its price, and apply any visible discounts. Generate a top-level 'items' array with details for each product. Each item object must include: 'name', 'description', 'price' (total as a string like '$12.34'), 'rank' (number), 'price_per_kg' (number), 'price_per_lb' (number), 'conversion_details' (string, e.g., '$6.23 for 0.189 kg'), and 'is_estimated' (a boolean). If you estimate the weight for a 'per each' item, set 'is_estimated' to true; otherwise, set it to false. For unit prices, provide only the number; if not applicable, use -1. Also provide an overall 'comparison_summary' and a 'math_steps' string detailing your calculations. Crucially, if an item is priced 'per each' (e.g., avocados, steaks), use your knowledge to estimate a typical weight for one item (e.g., 'avocado avg. weight 0.17kg') and use that estimate for the unit price calculation. You MUST state the estimated weight you used in the 'math_steps' for transparency. Respond ONLY with the specified JSON object.`;
@@ -356,9 +356,14 @@
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error('Gemini API Error:', errorBody);
-                    if (response.status === 403 && errorBody.error?.details?.[0]?.reason === 'SERVICE_DISABLED') {
-                        const activationUrl = errorBody.error.details[0].metadata.activationUrl;
-                        throw new Error(`The Generative Language API is not enabled. Please enable it here: ${activationUrl}`);
+                    if (response.status === 403) {
+                        if (errorBody.error?.details?.[0]?.reason === 'SERVICE_DISABLED') {
+                            const activationUrl = errorBody.error.details[0].metadata.activationUrl;
+                            throw new Error(`The Generative Language API is not enabled for your project. Please enable it here: ${activationUrl}`);
+                        }
+                        if (errorBody.error?.details?.[0]?.reason === 'API_KEY_HTTP_REFERRER_BLOCKED') {
+                             throw new Error('API Key is restricted. In your Google Cloud Console, please edit your API key and under "Application restrictions", set it to "None" to fix this.');
+                        }
                     }
                     throw new Error('Gemini API request failed. Check your API key and permissions.');
                 }
@@ -580,5 +585,4 @@
     </script>
 </body>
 </html>
-
 
