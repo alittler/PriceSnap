@@ -43,7 +43,7 @@
                 </svg>
                 <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-300 to-orange-400 text-transparent bg-clip-text">PriceSnap</h1>
             </div>
-            <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal. <button id="sampleBtn" class="text-cyan-400 hover:text-cyan-300 underline">Or use sample photos</button></p>
+            <p class="text-slate-400 mt-2 text-sm sm:text-base">Add up to 5 photos. Let AI find the best deal.</p>
         </header>
 
         <!-- Main Comparison Area -->
@@ -117,7 +117,6 @@
         const loaderText = document.getElementById('loaderText');
         const resultsContent = document.getElementById('resultsContent');
         const errorContent = document.getElementById('errorContent');
-        const sampleBtn = document.getElementById('sampleBtn');
         
         function handleFileSelect(event) {
             const file = event.target.files[0];
@@ -246,8 +245,8 @@
             await callGeminiAPI();
         }
         
-        async function callGeminiAPI(prompt, methodUsed = "Gemini AI", imageCount = uploadedImages.length) {
-            loaderText.textContent = `Analyzing with ${methodUsed}...`;
+        async function callGeminiAPI() {
+            loaderText.textContent = `Analyzing with Gemini AI...`;
             const apiKey = "AIzaSyDySp9D6chCo8LrWfzvxhxnCGFex8-DIPw";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
             
@@ -257,8 +256,8 @@
                 inline_data: { mime_type: "image/jpeg", data: img.base64 }
             }));
             
-            const userPrompt = prompt || `Analyze these ${imageCount} images. Provide a summary of your findings in the requested JSON format.`;
-            const contentParts = prompt ? [{ text: userPrompt }] : [{ text: userPrompt }, ...imageParts];
+            const userPrompt = `Analyze these ${uploadedImages.length} images. Provide a summary of your findings in the requested JSON format.`;
+            const contentParts = [{ text: userPrompt }, ...imageParts];
 
             const payload = {
                 systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -288,7 +287,7 @@
                 }
                 const data = await response.json();
                 const jsonResponse = JSON.parse(data.candidates[0].content.parts[0].text);
-                displayResults(jsonResponse, methodUsed);
+                displayResults(jsonResponse);
             } catch (error) {
                 console.error("Error calling Gemini API:", error);
                 displayError(error.message);
@@ -323,7 +322,7 @@
             };
         }
 
-        function displayResults(data, methodUsed) {
+        function displayResults(data) {
             document.getElementById('summary').textContent = data.comparison_summary.replace(/\\\$/g, '$');
             document.getElementById('mathSteps').textContent = data.math_steps.replace(/\\\$/g, '$');
             
@@ -393,8 +392,8 @@
                     <p class="text-slate-400 text-sm">${item.description}</p>
                 </div>
                 <div>
-                    <p class="text-xl sm:text-2xl font-bold text-white mt-1">${item.price}</p>
-                    <p class="text-sm text-slate-500 mt-1">(${kgPrice}${estText})</p>
+                    <p class="text-xl sm:text-2xl font-bold text-white mt-1">${kgPrice}${estText}</p>
+                    <p class="text-sm text-slate-500 mt-1">(${item.conversion_details})</p>
                 </div>
             `;
             return card;
@@ -460,29 +459,6 @@
             uploadedImages.splice(index, 1);
             renderUI();
         }
-        
-        async function useSamplePhotos() {
-            resetView();
-            const samples = [
-                {
-                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=NY+Striploin+Steak%0A%2414.99+%2F+lb%0A%0ATotal%3A+%2425.48%0AWeight%3A+1.7+lbs',
-                    text: 'Image 1: NY Striploin Steak, $14.99 / lb, Total: $25.48, Weight: 1.7 lbs'
-                },
-                {
-                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=Chicken+Thighs%0A%245.49+%2F+kg%0A%0ATotal%3A+%248.78%0AWeight%3A+1.6+kg',
-                    text: 'Image 2: Chicken Thighs, $5.49 / kg, Total: $8.78, Weight: 1.6 kg'
-                },
-                {
-                    src: 'https://placehold.co/600x400/334155/e2e8f0?text=Avocados%0A%241.99+each',
-                    text: 'Image 3: Avocados, $1.99 each'
-                }
-            ];
-            uploadedImages = samples.map(s => ({ src: s.src, base64: '' }));
-            renderUI();
-            prepareForAnalysis();
-            const combinedText = samples.map(s => s.text).join('\n');
-            await analyzeTextWithGemini(combinedText, "Sample Data", samples.length);
-        }
 
         function initializeApp() {
             renderUI();
@@ -497,7 +473,6 @@
                 }
             });
             resetBtn.addEventListener('click', resetView);
-            sampleBtn.addEventListener('click', useSamplePhotos);
         }
 
         // Initial setup
